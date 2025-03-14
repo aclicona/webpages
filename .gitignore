@@ -55,3 +55,4 @@ logfile
 /.idea
 frontend/.nuxt
 frontend/.output
+/prod.env

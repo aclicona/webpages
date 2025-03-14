@@ -1,26 +1,29 @@
 import logging.handlers
 import os
 from datetime import timedelta
+import dj_database_url
+import environ
 
-from decouple import config
-from dj_database_url import parse as db_url
+
 from gqlauth.settings_type import GqlAuthSettings, email_field, first_name_field
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 ROOT_URLCONF = 'urls'
 WSGI_APPLICATION = 'wsgi.application'
 
 # Vite's configuration for the Vue frontend
-VITE_DEV_SERVER_HOST = config('VITE_DEV_SERVER_HOST', default='localhost')
-VITE_DEV_SERVER_PORT = config('VITE_DEV_SERVER_PORT', default=5173, cast=int)
-VITE_DEV_SERVER_PROTOCOL = config('VITE_DEV_SERVER_PROTOCOL', default='http')
+VITE_DEV_SERVER_HOST = env.str('VITE_DEV_SERVER_HOST', default='localhost')
+VITE_DEV_SERVER_PORT = env.int('VITE_DEV_SERVER_PORT', default=5173)
+VITE_DEV_SERVER_PROTOCOL = env.str('VITE_DEV_SERVER_PROTOCOL', default='http')
 
 # Security settings with better defaults
-SECRET_KEY = config('SECRET_KEY')
-DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = env.str('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
 ADMINS = [
-    ('Admin Name', config('ADMIN_EMAIL', default='admin@example.com'))
+    ('Admin Name', env.str('ADMIN_EMAIL', default='admin@example.com'))
 ]
 
 # Application definition with organized grouping
@@ -51,7 +54,6 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'apps.core',
     'apps.account',
-    # 'apps.document',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -102,13 +104,25 @@ TEMPLATES = [
 ]
 
 # Enhanced database configuration
-DATABASES = {
-    'default': config(
-        'DATABASE_URL',
-        default='postgres://localhost/dbname',
-        cast=db_url
-    )
-}
+if os.environ.get('DATABASE_URL'):
+    # Usar la DATABASE_URL proporcionada por el entorno
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL')
+        )
+    }
+else:
+    # En desarrollo, construir la conexión con los parámetros individuales
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('POSTGRES_DB'),
+            'USER': env('POSTGRES_USER'),
+            'PASSWORD': env('POSTGRES_PASSWORD'),
+            'HOST': env('POSTGRES_HOST'),
+            'PORT': env.int('POSTGRES_PORT'),
+        }
+    }
 
 # Improved authentication settings
 AUTH_USER_MODEL = "account.User"
@@ -125,10 +139,10 @@ GQL_AUTH = GqlAuthSettings(
     REGISTER_MUTATION_FIELDS={email_field, first_name_field},
     JWT_PAYLOAD_PK=email_field,
     LOGIN_FIELDS={email_field},
-    ALLOW_LOGIN_NOT_VERIFIED=config('ALLOW_LOGIN_NOT_VERIFIED', default=True),
-    SEND_ACTIVATION_EMAIL=config('SEND_ACTIVATION_EMAIL', default=True),
-    PASSWORD_RESET_PATH_ON_EMAIL=config('PASSWORD_RESET_PATH_ON_EMAIL', default="account/password-reset"),
-    ACTIVATION_PATH_ON_EMAIL=config('ACTIVATION_PATH_ON_EMAIL', default="account/activate"),
+    ALLOW_LOGIN_NOT_VERIFIED=env.bool('ALLOW_LOGIN_NOT_VERIFIED', default=True),
+    SEND_ACTIVATION_EMAIL=env.bool('SEND_ACTIVATION_EMAIL', default=True),
+    PASSWORD_RESET_PATH_ON_EMAIL=env.bool('PASSWORD_RESET_PATH_ON_EMAIL', default="account/password-reset"),
+    ACTIVATION_PATH_ON_EMAIL=env.bool('ACTIVATION_PATH_ON_EMAIL', default="account/activate"),
     EMAIL_TEMPLATE_PASSWORD_RESET="mails/account_password_reset_email.html",
     EMAIL_TEMPLATE_ACTIVATION="mails/account_activation_email.html",
     EMAIL_TEMPLATE_ACTIVATION_RESEND="mails/account_activation_email.html",
@@ -160,7 +174,7 @@ VERSATILEIMAGEFIELD_RENDITION_KEY_SETS = {
 
 VERSATILEIMAGEFIELD_SETTINGS = {
     # Images should be pre-generated on Production environment
-    "create_images_on_demand": config('CREATE_IMAGES_ON_DEMAND', default=DEBUG)
+    "create_images_on_demand": env.bool('CREATE_IMAGES_ON_DEMAND', default=DEBUG)
 }
 
 # Modern security settings
@@ -310,8 +324,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 import sys
 
 sys.excepthook = handle_exception
-BACKEND_HOST = config('BACKEND_HOST', default="www.backend-host.com")
-SITE_NAME = config('SITE_NAME', default='SITE_NAME')
+BACKEND_HOST = env.str('BACKEND_HOST', default="www.backend-host.com")
+SITE_NAME = env.str('SITE_NAME', default='SITE_NAME')
 SITE_ID = 1
 SITES = [{'pk': SITE_ID, "domain": BACKEND_HOST, "name": SITE_NAME}]
 
