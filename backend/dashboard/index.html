@@ -1,0 +1,20 @@
+{% load vite %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %}</title>
+
+  {% if vite_dev_mode %}
+  <script type="module" src="{{ vite_server_url }}/@vite/client"></script>
+  {% endif %}
+
+  {% vite_asset 'src/main.js' %}
+</head>
+<body>
+<div id="app"></div>
+{% block content %}{% endblock %}
+</body>
+
+</html>
